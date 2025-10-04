@@ -10,14 +10,11 @@ Script Purpose:
 	It performs the following actions:
 		- Truncates the bronze tables before loading data
 		- Uses the 'BULK INSERT' command to load data from CSV files to bronze tables.
-		- If found, deletes rows from the customers table with no first name. Afterwards,
-		  returns customers' ID and signup date that are in the orders table, but not in
-		  the customers' table
 	Parameters:
 		None.
 	 This stored procedure does not accept any parameters or return any values.
 
-	To run after creating or altering:
+	Usage Example:
 		EXEC bronze.load_bronze;
 ==================================================================================
 */
@@ -119,24 +116,6 @@ BEGIN
 
 		SET @end_time = GETDATE()
 
-		DELETE FROM bronze.customers_large
-		WHERE first_name IS NULL
-
-		 INSERT INTO bronze.customers_large (customer_id, signup_date)
-		 SELECT newcust.customer_id, newcust.signup_date
-			FROM (
-				 SELECT 
-					o.customer_id,
-					MIN(o.order_date) AS signup_date
-			 FROM bronze.orders_large o
-			 WHERE o.order_date IS NOT NULL   -- ensure valid dates only
-			 GROUP BY o.customer_id
-				) AS newcust
-		WHERE NOT EXISTS (
-			SELECT 1
-		    FROM bronze.customers_large c
-		    WHERE c.customer_id = newcust.customer_id
-			 );
 
 		PRINT '>> Load Duration: ' + CAST(DATEDIFF(SECOND,@start_time,@end_time) AS NVARCHAR) + 'seconds'
 		PRINT '-----------------------'
